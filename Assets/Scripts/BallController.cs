@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using Unity.Netcode;
@@ -24,7 +25,7 @@ public class BallController : NetworkBehaviour
     }
 
     // Update is called once per frame
-    void Update()
+    private void Update()
     {
         if (IsClient)
         {
@@ -32,19 +33,25 @@ public class BallController : NetworkBehaviour
         }
         if (IsServer)
         {
+            
             _position.Value += _moveDirection * m_SpeedMove  * Time.deltaTime;
             if(Mathf.Abs(_position.Value.x ) > m_xRange)
             {
-                _moveDirection.x = -_moveDirection.x;
+                Debug.Log($"pos: {_position.Value.x}; move: {_moveDirection.x} ");
+                _moveDirection.x = InvertDirection(_moveDirection.x, _position.Value.x);
             }
             if (Mathf.Abs(_position.Value.z) > m_yRange)
             {
-                _moveDirection.z = -_moveDirection.z;
+                _moveDirection.z = InvertDirection(_moveDirection.z, _position.Value.z);
             }
 
             m_SpeedMove += m_AccelMove * Time.deltaTime;
-        }
-
-       
+        }       
     }
+
+    private float InvertDirection(float vel, float pos)
+    {
+        return MathF.Abs(vel) * Mathf.Sign(-pos);
+    }
+
 }

@@ -20,7 +20,7 @@ public class UIManager : MonoBehaviour
         m_HostButton.onClick.AddListener(HostButtonHandler);
         m_ClientButton.onClick.AddListener(ClientButtonHandler);
         m_ServerButton.onClick.AddListener(ServerButtonHandler);
-        m_NewPlaceButton.onClick.AddListener(NewPlaceButtonHandler);
+        //m_NewPlaceButton.onClick.AddListener(NewPlaceButtonHandler);
     }
 
     private void HostButtonHandler()
@@ -36,20 +36,7 @@ public class UIManager : MonoBehaviour
     {
         NetworkManager.Singleton.StartServer();
     }
-    private void NewPlaceButtonHandler()
-    {
-        if (NetworkManager.Singleton.IsServer && !NetworkManager.Singleton.IsClient)
-        {
-            foreach (ulong uid in NetworkManager.Singleton.ConnectedClientsIds)
-                NetworkManager.Singleton.SpawnManager.GetPlayerNetworkObject(uid).GetComponent<PlayerController>().Move();
-        }
-        else
-        {
-            var playerObject = NetworkManager.Singleton.SpawnManager.GetLocalPlayerObject();
-            var player = playerObject.GetComponent<PlayerController>();
-            player.Move();
-        }
-    }
+   
 
     private void StatusLabels()
     {

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using Unity.Netcode;
 using Unity.Netcode.Components;
+using Unity.VisualScripting;
 using UnityEngine;
 
 public class PlayerController : NetworkBehaviour
@@ -10,65 +11,36 @@ public class PlayerController : NetworkBehaviour
     private NetworkClient _networkClient;
     public NetworkVariable<Vector3> Position = new NetworkVariable<Vector3>();
     private float speed = 0.1f;
+    [SerializeField] private GameObject _view;
+
     public override void OnNetworkSpawn()
     {
-        //OwnerClientId
-        Debug.Log($"OnNetworkSpawn {OwnerClientId}");
-        if (IsServer)
-            _networkClient = NetworkManager.Singleton.ConnectedClients[OwnerClientId];
-        //enabled = IsOwner;
-        if (IsOwner)
-        {
-           
-            Move();
-        }
+        base.OnNetworkSpawn();
+        SetViewEnable(false);
     }
-
-    
-
-    public void Move()
-    {
-        if (NetworkManager.Singleton.IsServer)
-        {
-            var randomPosition = GetRandomPositionOnPlane();
-            transform.position = randomPosition;
-            Position.Value = randomPosition;
-        }
-        else
-        {
-            SubmitPositionRequestServerRpc();
-        }
-    }
-
-    [ServerRpc]
-    void SubmitPositionRequestServerRpc(ServerRpcParams rpcParams = default)
-    {
-        Position.Value = GetRandomPositionOnPlane();
-    }
-
-    static Vector3 GetRandomPositionOnPlane()
-    {
-        return new Vector3(Random.Range(-3f, 3f), 1f, Random.Range(-3f, 3f));
-    }
-
-    void Update()
-    {
-
-
-        transform.position = Position.Value;
-
-        if (IsOwner)
+    private void Update()
+    {      
+        if (IsOwner && _view.activeSelf)
         {
             var xaxis = Input.GetAxis("Horizontal");
-            var yaxis = Input.GetAxis("Vertical");
-            PlayerInputMoveServerRpc(xaxis, yaxis);
+            PlayerInputMoveServerRpc(xaxis);
         }
+    }
 
+    public void SetViewEnable(bool enable)
+    {
+        SetViewClientRpc(enable);
+    }
+    [ClientRpc]
+    private void SetViewClientRpc(bool enable)
+    {
+        _view.SetActive(enable);
     }
 
     [ServerRpc]
-    private void PlayerInputMoveServerRpc(float xaxis, float yaxis)
+    private void PlayerInputMoveServerRpc(float xaxis)
     {
-        Position.Value += new Vector3(xaxis, 0, yaxis) * speed;
+        transform.Translate(Position.Value - transform.position);
+        Position.Value += new Vector3(xaxis, 0, 0) * speed * Time.deltaTime;
     }
 }

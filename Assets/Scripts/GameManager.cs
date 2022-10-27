@@ -11,7 +11,8 @@ public class GameManager : MonoBehaviour
     public static GameManager Instance => _instance;
 
     [SerializeField] private BallController m_BallPrefab;
-    [SerializeField] private Vector3[] m_StartPositions;
+    [SerializeField] private NetworkObject m_MovePlatform;
+    [SerializeField] private Transform[] m_StartPositions;
 
     private List<PlayerController> playerControllers = new List<PlayerController>();
 
@@ -54,20 +55,29 @@ public class GameManager : MonoBehaviour
     private void OnConnectedClient(ulong cliendId)
     {
         if(NetworkManager.Singleton.IsServer)
-        {
-            foreach (var item in NetworkManager.Singleton.ConnectedClients)
-            {
-                Debug.Log($"ConnectedClients {item.Key}");
-            }
+        {            
             var player = NetworkManager.Singleton.ConnectedClients[cliendId]
                 .OwnedObjects.Find(x => x.GetComponent<PlayerController>() != null)
                 .GetComponent<PlayerController>();
             playerControllers.Add(player);
+            player.Position.Value = m_StartPositions[cliendId].position;
+            if (playerControllers.Count == m_StartPositions.Length)
+            {
+                var inst = Instantiate(m_BallPrefab);
+                inst.GetComponent<NetworkObject>().Spawn();
+                playerControllers.ForEach(x => x.SetViewEnable(true));
+            }
         }  
     }
 
-    private void OnDisconnectedClient(ulong obj)
+
+
+    private void OnDisconnectedClient(ulong cliendId)
     {
-        Debug.Log("OnClientConnectedCallback");
+        var player = NetworkManager.Singleton.ConnectedClients[cliendId]
+                 .OwnedObjects.Find(x => x.GetComponent<PlayerController>() != null)
+                 .GetComponent<PlayerController>();
+        playerControllers.Remove(player);
+        playerControllers.ForEach(x => x.SetViewEnable(false));
     }
 }
