@@ -10,7 +10,7 @@ public class PlayerController : NetworkBehaviour
 {
     private NetworkClient _networkClient;
     public NetworkVariable<Vector3> Position = new NetworkVariable<Vector3>();
-    private float speed = 0.1f;
+    [SerializeField] private float speed = 10f;
     [SerializeField] private GameObject _view;
 
     public override void OnNetworkSpawn()
@@ -19,12 +19,13 @@ public class PlayerController : NetworkBehaviour
         SetViewEnable(false);
     }
     private void Update()
-    {      
+    {
+        transform.Translate(Position.Value - transform.position);
         if (IsOwner && _view.activeSelf)
-        {
+        {        
             var xaxis = Input.GetAxis("Horizontal");
             PlayerInputMoveServerRpc(xaxis);
-        }
+         }
     }
 
     public void SetViewEnable(bool enable)
@@ -39,8 +40,7 @@ public class PlayerController : NetworkBehaviour
 
     [ServerRpc]
     private void PlayerInputMoveServerRpc(float xaxis)
-    {
-        transform.Translate(Position.Value - transform.position);
+    {        
         Position.Value += new Vector3(xaxis, 0, 0) * speed * Time.deltaTime;
     }
 }

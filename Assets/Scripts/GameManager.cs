@@ -1,3 +1,4 @@
+using ProjectCore.Effects;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -5,7 +6,7 @@ using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.Networking.Types;
 
-public class GameManager : MonoBehaviour
+public class GameManager : NetworkBehaviour
 {
     private static GameManager _instance;     
     public static GameManager Instance => _instance;
@@ -14,11 +15,13 @@ public class GameManager : MonoBehaviour
     [SerializeField] private NetworkObject m_MovePlatform;
     [SerializeField] private Transform[] m_StartPositions;
 
-    private List<PlayerController> playerControllers = new List<PlayerController>();
+    private List<PlayerController> _playerControllers = new List<PlayerController>();
+
+    public List<PlayerController> PlayerControllers => _playerControllers;
 
     private void Awake()
     {
-        if(NetworkManager.Singleton.IsServer)
+        if (_instance == null)
         {
             _instance = this;
             DontDestroyOnLoad(gameObject);
@@ -26,11 +29,11 @@ public class GameManager : MonoBehaviour
     }
 
     private void Start()
-    {
-       
+    {        
         NetworkManager.Singleton.OnClientConnectedCallback += OnConnectedClient;
         NetworkManager.Singleton.OnClientDisconnectCallback += OnDisconnectedClient;
         NetworkManager.Singleton.ConnectionApprovalCallback += ApproveConnection;
+        effectManager = FindObjectOfType<EffectManager>();
     }
 
     private void ApproveConnection(NetworkManager.ConnectionApprovalRequest request, NetworkManager.ConnectionApprovalResponse response)
@@ -59,25 +62,55 @@ public class GameManager : MonoBehaviour
             var player = NetworkManager.Singleton.ConnectedClients[cliendId]
                 .OwnedObjects.Find(x => x.GetComponent<PlayerController>() != null)
                 .GetComponent<PlayerController>();
-            playerControllers.Add(player);
+            _playerControllers.Add(player);
             player.Position.Value = m_StartPositions[cliendId].position;
-            if (playerControllers.Count == m_StartPositions.Length)
+            if (_playerControllers.Count == m_StartPositions.Length)
             {
                 var inst = Instantiate(m_BallPrefab);
                 inst.GetComponent<NetworkObject>().Spawn();
-                playerControllers.ForEach(x => x.SetViewEnable(true));
+                _playerControllers.ForEach(x => x.SetViewEnable(true));
             }
         }  
     }
-
-
-
     private void OnDisconnectedClient(ulong cliendId)
     {
         var player = NetworkManager.Singleton.ConnectedClients[cliendId]
                  .OwnedObjects.Find(x => x.GetComponent<PlayerController>() != null)
                  .GetComponent<PlayerController>();
-        playerControllers.Remove(player);
-        playerControllers.ForEach(x => x.SetViewEnable(false));
+        _playerControllers.Remove(player);
+        _playerControllers.ForEach(x => x.SetViewEnable(false));
+    }
+
+    private EffectManager effectManager;
+
+    private void Update()
+    {
+        if (IsServer)
+        {
+            if (Input.GetKeyDown(KeyCode.Q))
+            {
+                Debug.Log(_playerControllers[0].name);
+                effectManager.TakeBonus(new LastPlayerBigView(_playerControllers, _playerControllers[0], 5));
+            }
+            if (Input.GetKey(KeyCode.E))
+            {
+                effectManager.TakeBonus(new LastPlayerBigView(_playerControllers, _playerControllers[1], 5));
+            }
+        }
+    }
+
+    public void CollideBorder(int side)
+    {
+
+    }
+
+    public void CollidePlayer(ulong playerId)
+    {
+
+    }
+
+    public void CollideEffectBonus(IBonusEffect bonusEffect)
+    {
+
     }
 }

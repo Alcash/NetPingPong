@@ -27,26 +27,61 @@ public class BallController : NetworkBehaviour
     // Update is called once per frame
     private void Update()
     {
+        transform.Translate(_position.Value - transform.position);
         if (IsClient)
         {
-            transform.Translate(_position.Value - transform.position);
+            
         }
         if (IsServer)
         {
-            
-            _position.Value += _moveDirection * m_SpeedMove  * Time.deltaTime;
-            if(Mathf.Abs(_position.Value.x ) > m_xRange)
-            {
-                Debug.Log($"pos: {_position.Value.x}; move: {_moveDirection.x} ");
-                _moveDirection.x = InvertDirection(_moveDirection.x, _position.Value.x);
-            }
-            if (Mathf.Abs(_position.Value.z) > m_yRange)
-            {
-                _moveDirection.z = InvertDirection(_moveDirection.z, _position.Value.z);
-            }
-
-            m_SpeedMove += m_AccelMove * Time.deltaTime;
+            IncreaseSpeed();
+            BorderLimit();
+            PlayerPlatformCollision();
         }       
+    }
+
+    private void IncreaseSpeed()
+    {
+        _position.Value += _moveDirection * m_SpeedMove * Time.deltaTime;
+    }
+
+    private void BorderLimit()
+    {
+        if (Mathf.Abs(_position.Value.x) > m_xRange)
+        {
+            _moveDirection.x = InvertDirection(_moveDirection.x, _position.Value.x);
+            
+        }
+        if (Mathf.Abs(_position.Value.z) > m_yRange)
+        {
+            _moveDirection.z = InvertDirection(_moveDirection.z, _position.Value.z);
+            GameManager.Instance.CollideBorder(_position.Value.z > 0 ? 1 : 0);
+        }
+
+        m_SpeedMove += m_AccelMove * Time.deltaTime;
+    }
+
+    private void PlayerPlatformCollision()
+    {
+        foreach (var player in GameManager.Instance.PlayerControllers)
+        {
+           if(Mathf.Abs(player.transform.position.z) < Mathf.Abs(_position.Value.z))
+           {
+               if(NearPlayerOnX(_position.Value.x, player.transform))
+                {
+                    _moveDirection.z = InvertDirection(_moveDirection.z, _position.Value.z);
+                    GameManager.Instance.CollidePlayer(player.NetworkObject.OwnerClientId);
+                    Debug.Log($"PosZ = {_position.Value.z}");
+
+                }
+           }
+        } 
+    }
+
+    private bool NearPlayerOnX(float x, Transform transformPlayer)
+    {
+        return transformPlayer.position.x - transformPlayer.localScale.x / 2 < x 
+            && transformPlayer.position.x + transformPlayer.localScale.x / 2 > x;
     }
 
     private float InvertDirection(float vel, float pos)
